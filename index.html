@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SAN Zone Config Generator – Dell MDS 9132T</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:system-ui,-apple-system,sans-serif;background:#0f1117;color:#e2e8f0;min-height:100vh;padding:24px}
+  h1{font-size:20px;font-weight:600;color:#f8fafc;margin-bottom:4px}
+  .subtitle{font-size:13px;color:#64748b;margin-bottom:28px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px}
+  @media(max-width:720px){.grid{grid-template-columns:1fr}}
+  .card{background:#1e2330;border:1px solid #2d3448;border-radius:10px;padding:18px}
+  .card h2{font-size:14px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+  .card h2 .dot{width:8px;height:8px;border-radius:50%}
+  .dot-storage{background:#3b82f6}
+  .dot-server{background:#10b981}
+  .dot-cfg{background:#8b5cf6}
+  label{font-size:12px;color:#64748b;display:block;margin-bottom:4px;margin-top:10px}
+  label:first-of-type{margin-top:0}
+  input,select{width:100%;background:#0f1117;border:1px solid #2d3448;border-radius:6px;padding:7px 10px;color:#e2e8f0;font-size:13px;outline:none;transition:border .15s}
+  input:focus,select:focus{border-color:#3b82f6}
+  .port-row{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;margin-bottom:8px}
+  .port-row input{width:100%}
+  .btn-rm{background:none;border:1px solid #374151;border-radius:6px;color:#6b7280;width:30px;height:30px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+  .btn-rm:hover{border-color:#ef4444;color:#ef4444}
+  .btn-add{margin-top:4px;width:100%;background:none;border:1px dashed #374151;border-radius:6px;padding:6px;color:#4b5563;font-size:13px;cursor:pointer;transition:all .15s}
+  .btn-add:hover{border-color:#3b82f6;color:#3b82f6}
+  .generate-row{margin-top:6px}
+  .btn-gen{width:100%;background:#3b82f6;border:none;border-radius:8px;padding:11px;color:#fff;font-size:14px;font-weight:600;cursor:pointer;transition:background .15s}
+  .btn-gen:hover{background:#2563eb}
+  .output-card{background:#0a0d14;border:1px solid #2d3448;border-radius:10px;padding:18px;margin-top:20px}
+  .output-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+  .output-header h2{font-size:14px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:.05em}
+  .btn-copy{background:#1e2330;border:1px solid #2d3448;border-radius:6px;padding:6px 14px;color:#94a3b8;font-size:12px;cursor:pointer;transition:all .15s}
+  .btn-copy:hover{border-color:#3b82f6;color:#3b82f6}
+  .btn-copy.copied{border-color:#10b981;color:#10b981}
+  pre{font-family:'Cascadia Code','Fira Mono','Courier New',monospace;font-size:12.5px;line-height:1.65;color:#a5f3c8;white-space:pre;overflow-x:auto;max-height:560px;overflow-y:auto}
+  .empty{color:#374151;font-style:italic;font-size:13px;text-align:center;padding:24px}
+  .tag{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;margin-left:8px}
+  .tag-vsan{background:#1e3a5f;color:#60a5fa}
+  .cfg-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .btn-dl{background:none;border:1px solid #2d3448;border-radius:6px;padding:6px 14px;color:#94a3b8;font-size:12px;cursor:pointer;transition:all .15s;margin-left:8px}
+  .btn-dl:hover{border-color:#10b981;color:#10b981}
+</style>
+</head>
+<body>
+
+<h1>SAN Zone Config Generator <span class="tag tag-vsan">Dell MDS 9132T</span></h1>
+<p class="subtitle">Tạo cấu hình device-alias, zone và zoneset cho Fibre Channel switch</p>
+
+<div class="grid">
+  <!-- Config chung -->
+  <div class="card">
+    <h2><span class="dot dot-cfg"></span>Cấu hình chung</h2>
+    <div class="cfg-row">
+      <div>
+        <label>VSAN ID</label>
+        <input id="vsanId" type="number" value="1002" min="1" max="4094">
+      </div>
+      <div>
+        <label>Zoneset Name</label>
+        <input id="zonesetName" type="text" value="VKS_01" placeholder="VKS_01">
+      </div>
+    </div>
+  </div>
+
+  <!-- Placeholder right -->
+  <div></div>
+
+  <!-- Storage ports -->
+  <div class="card">
+    <h2><span class="dot dot-storage"></span>Storage Ports (Controller A/B)</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:6px">
+      <span style="font-size:11px;color:#475569">Alias Name</span>
+      <span style="font-size:11px;color:#475569">PWWN</span>
+      <span></span>
+    </div>
+    <div id="storagePorts"></div>
+    <button class="btn-add" onclick="addPort('storage')">+ Thêm storage port</button>
+  </div>
+
+  <!-- Server ports -->
+  <div class="card">
+    <h2><span class="dot dot-server"></span>Server HBA Ports</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:6px">
+      <span style="font-size:11px;color:#475569">Alias Name</span>
+      <span style="font-size:11px;color:#475569">PWWN</span>
+      <span></span>
+    </div>
+    <div id="serverPorts"></div>
+    <button class="btn-add" onclick="addPort('server')">+ Thêm server port</button>
+  </div>
+</div>
+
+<div class="generate-row">
+  <button class="btn-gen" onclick="generate()">⚡ Generate Config</button>
+</div>
+
+<div class="output-card" id="outputCard">
+  <div class="output-header">
+    <h2>Output Config</h2>
+    <div>
+      <button class="btn-copy" id="btnCopy" onclick="copyConfig()">Copy</button>
+      <button class="btn-dl" onclick="downloadConfig()">⬇ Download .txt</button>
+    </div>
+  </div>
+  <pre id="output"><span class="empty">Nhấn "Generate Config" để tạo cấu hình...</span></pre>
+</div>
+
+<script>
+const defaultStorage = [
+  ["xt380_01_ctrA_fc1_p2","50:06:01:65:4d:e0:4e:ab"],
+  ["xt380_01_ctrA_fc1_p4","50:06:01:67:4d:e0:4e:ab"],
+  ["xt380_01_ctrB_fc1_p2","50:06:01:6d:4d:e0:4e:ab"],
+  ["xt380_01_ctrB_fc1_p4","50:06:01:6f:4d:e0:4e:ab"],
+];
+const defaultServer = [
+  ["r660_01_fc2","10:00:70:b7:e4:39:f8:16"],
+  ["r660_02_fc2","10:00:70:b7:e4:39:f8:4f"],
+  ["r660_03_fc2","10:00:70:b7:e4:3c:26:6d"],
+  ["r660_04_fc2","10:00:70:b7:e4:39:f8:19"],
+];
+
+function makeRow(containerId, alias='', pwwn='') {
+  const div = document.createElement('div');
+  div.className = 'port-row';
+  div.innerHTML = `
+    <input type="text" placeholder="alias_name" value="${alias}">
+    <input type="text" placeholder="xx:xx:xx:xx:xx:xx:xx:xx" value="${pwwn}">
+    <button class="btn-rm" onclick="this.parentElement.remove()">×</button>`;
+  document.getElementById(containerId).appendChild(div);
+}
+
+function addPort(type) {
+  makeRow(type === 'storage' ? 'storagePorts' : 'serverPorts');
+}
+
+function getPorts(containerId) {
+  const rows = document.getElementById(containerId).querySelectorAll('.port-row');
+  const result = [];
+  rows.forEach(r => {
+    const [a, p] = r.querySelectorAll('input');
+    if (a.value.trim() && p.value.trim()) result.push([a.value.trim(), p.value.trim()]);
+  });
+  return result;
+}
+
+function generate() {
+  const vsanId = document.getElementById('vsanId').value || '1002';
+  const zonesetName = document.getElementById('zonesetName').value.trim() || 'VKS_01';
+  const storage = getPorts('storagePorts');
+  const servers = getPorts('serverPorts');
+
+  if (!storage.length || !servers.length) {
+    document.getElementById('output').textContent = '⚠  Cần ít nhất 1 storage port và 1 server port.';
+    return;
+  }
+
+  const lines = [];
+
+  // device-alias
+  lines.push('(config) # device-alias database');
+  storage.forEach(([a,p]) => lines.push(`device-alias name ${a} pwwn ${p}`));
+  servers.forEach(([a,p]) => lines.push(`device-alias name ${a} pwwn ${p}`));
+  lines.push('(config-device-alias-db) # exit');
+  lines.push('(config) #  device-alias commit');
+  lines.push('');
+
+  // zones
+  const zones = [];
+  servers.forEach(([srv]) => {
+    storage.forEach(([st]) => {
+      const zname = `${srv}-${st}`;
+      zones.push(zname);
+      lines.push(`(config) #  zone name ${zname} vsan ${vsanId}`);
+      lines.push(`member device-alias ${st}`);
+      lines.push(`member device-alias ${srv}`);
+      lines.push('exit');
+      lines.push('-');
+    });
+    lines.push('');
+  });
+
+  // zoneset
+  lines.push(`Switch (config)# zoneset name ${zonesetName} vsan ${vsanId}`);
+  zones.forEach(z => lines.push(`member ${z}`));
+  lines.push('exit');
+  lines.push(`Switch (config)# zoneset activate name ${zonesetName} vsan ${vsanId}`);
+
+  document.getElementById('output').textContent = lines.join('\n');
+  document.getElementById('btnCopy').textContent = 'Copy';
+  document.getElementById('btnCopy').className = 'btn-copy';
+}
+
+function copyConfig() {
+  const text = document.getElementById('output').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('btnCopy');
+    btn.textContent = '✓ Đã copy!';
+    btn.className = 'btn-copy copied';
+    setTimeout(() => { btn.textContent = 'Copy'; btn.className = 'btn-copy'; }, 2000);
+  });
+}
+
+function downloadConfig() {
+  const text = document.getElementById('output').textContent;
+  const vsan = document.getElementById('vsanId').value || '1002';
+  const zs = document.getElementById('zonesetName').value.trim() || 'VKS_01';
+  const blob = new Blob([text], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `san_config_${zs}_vsan${vsan}.txt`;
+  a.click();
+}
+
+// Init với data mẫu
+defaultStorage.forEach(([a,p]) => makeRow('storagePorts', a, p));
+defaultServer.forEach(([a,p]) => makeRow('serverPorts', a, p));
+</script>
+</body>
+</html>
