@@ -172,6 +172,7 @@
             zones.forEach(z => lines.push(`member ${z}`));
             lines.push('exit');
             lines.push(`Switch (config)# zoneset activate name ${zonesetName} vsan ${vsanId}`);
+            lines.push('exit');
             lines.push('');
             // save config
             lines.push('/* Lưu cấu hình */');
