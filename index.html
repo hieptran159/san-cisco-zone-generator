@@ -19,8 +19,9 @@
         .dot-cfg{background:#8b5cf6}
         label{font-size:12px;color:#64748b;display:block;margin-bottom:4px;margin-top:10px}
         label:first-of-type{margin-top:0}
-        input,select{width:100%;background:#0f1117;border:1px solid #2d3448;border-radius:6px;padding:7px 10px;color:#e2e8f0;font-size:13px;outline:none;transition:border .15s}
-        input:focus,select:focus{border-color:#3b82f6}
+        input,select,textarea{width:100%;background:#0f1117;border:1px solid #2d3448;border-radius:6px;padding:7px 10px;color:#e2e8f0;font-size:13px;outline:none;transition:border .15s}
+        input:focus,select:focus,textarea:focus{border-color:#3b82f6}
+        textarea{font-family:monospace;resize:vertical;height:60px}
         .port-row{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;margin-bottom:8px}
         .port-row input{width:100%}
         .btn-rm{background:none;border:1px solid #374151;border-radius:6px;color:#6b7280;width:30px;height:30px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
@@ -43,13 +44,17 @@
         .cfg-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
         .btn-dl{background:none;border:1px solid #2d3448;border-radius:6px;padding:6px 14px;color:#94a3b8;font-size:12px;cursor:pointer;transition:all .15s;margin-left:8px}
         .btn-dl:hover{border-color:#10b981;color:#10b981}
+        .bulk-box {margin-bottom: 12px; background: #151923; padding: 10px; border-radius: 6px; border: 1px solid #232a3b;}
+        .bulk-inputs {display: grid; grid-template-columns: 1fr 1fr; gap: 10px;}
+        .btn-import {width:100%; background:#22c55e; border:none; border-radius:6px; padding:6px; color:#fff; font-size:12px; font-weight:600; cursor:pointer; margin-top:8px; transition:background .15s}
+        .btn-import:hover {background:#16a34a}
     </style>
 </head>
 <body>
     <h1>SAN Zone Config Generator <span class="tag tag-vsan">Dell MDS 9132T</span></h1>
     <p class="subtitle">Tạo cấu hình device-alias, zone và zoneset cho Fibre Channel switch</p>
     <div class="grid">
-        <div class="card">
+        <div class="card" style="grid-column: span 2;">
             <h2><span class="dot dot-cfg"></span>Cấu hình chung</h2>
             <div class="cfg-row">
                 <div>
@@ -61,31 +66,58 @@
                     <input id="zonesetName" type="text" value="VKS_01" placeholder="VKS_01">
                 </div>
                 <div>
-                    <label>Ký tự nối Zone (alias Storage - Server)</label>
+                    <label>Ký tự nối Zone</label>
                     <input id="zoneSeparator" type="text" value="-" placeholder="-">
                 </div>
             </div>
         </div>
-        <div></div>
+
         <div class="card">
             <h2><span class="dot dot-storage"></span>Storage Ports (Controller A/B)</h2>
+            <div class="bulk-box">
+                <div class="bulk-inputs">
+                    <div>
+                        <label style="margin-top:0;">Loạt Alias (Mỗi dòng 1 cái)</label>
+                        <textarea id="bulkStorageAlias" placeholder="MDS_ST_A1&#10;MDS_ST_A2"></textarea>
+                    </div>
+                    <div>
+                        <label style="margin-top:0;">Loạt PWWN (Mỗi dòng 1 cái)</label>
+                        <textarea id="bulkStoragePwwn" placeholder="50:06:01:65:...&#10;50:06:01:67:..."></textarea>
+                    </div>
+                </div>
+                <button class="btn-import" onclick="processBulkImport('storage')">📥 Import dữ liệu Storage</button>
+            </div>
             <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:6px">
                 <span style="font-size:11px;color:#475569">Alias Name</span>
                 <span style="font-size:11px;color:#475569">PWWN</span>
                 <span></span>
             </div>
             <div id="storagePorts"></div>
-            <button class="btn-add" onclick="addPort('storage')">+ Thêm storage port</button>
+            <button class="btn-add" onclick="addPort('storage')">+ Thêm hàng trống thủ công</button>
         </div>
+
         <div class="card">
             <h2><span class="dot dot-server"></span>Server HBA Ports</h2>
+            <div class="bulk-box">
+                <div class="bulk-inputs">
+                    <div>
+                        <label style="margin-top:0;">Loạt Alias (Mỗi dòng 1 cái)</label>
+                        <textarea id="bulkServerAlias" placeholder="srv_01_fc1&#10;srv_02_fc1"></textarea>
+                    </div>
+                    <div>
+                        <label style="margin-top:0;">Loạt PWWN (Mỗi dòng 1 cái)</label>
+                        <textarea id="bulkServerPwwn" placeholder="10:00:70:b7:...&#10;10:00:70:b7:..."></textarea>
+                    </div>
+                </div>
+                <button class="btn-import" onclick="processBulkImport('server')">📥 Import dữ liệu Server</button>
+            </div>
             <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;margin-bottom:6px">
                 <span style="font-size:11px;color:#475569">Alias Name</span>
                 <span style="font-size:11px;color:#475569">PWWN</span>
                 <span></span>
             </div>
             <div id="serverPorts"></div>
-            <button class="btn-add" onclick="addPort('server')">+ Thêm server port</button>
+            <button class="btn-add" onclick="addPort('server')">+ Thêm hàng trống thủ công</button>
         </div>
     </div>
     <div class="generate-row">
@@ -114,6 +146,7 @@
             ["r660_03_fc2","10:00:70:b7:e4:3c:26:6d"],
             ["r660_04_fc2","10:00:70:b7:e4:39:f8:19"],
         ];
+
         function makeRow(containerId, alias='', pwwn='') {
             const div = document.createElement('div');
             div.className = 'port-row';
@@ -123,9 +156,37 @@
                 <button class="btn-rm" onclick="this.parentElement.remove()">×</button>`;
             document.getElementById(containerId).appendChild(div);
         }
+
         function addPort(type) {
             makeRow(type === 'storage' ? 'storagePorts' : 'serverPorts');
         }
+
+        function processBulkImport(type) {
+            const prefix = type === 'storage' ? 'Storage' : 'Server';
+            const containerId = type === 'storage' ? 'storagePorts' : 'serverPorts';
+            
+            const txtAlias = document.getElementById(`bulk${prefix}Alias`);
+            const txtPwwn = document.getElementById(`bulk${prefix}Pwwn`);
+            
+            const aliases = txtAlias.value.split('\n').map(s => s.trim()).filter(s => s);
+            const pwwns = txtPwwn.value.split('\n').map(s => s.trim()).filter(s => s);
+            
+            if (aliases.length === 0 && pwwns.length === 0) {
+                alert("Vui lòng điền dữ liệu trước khi Import!");
+                return;
+            }
+
+            const maxLen = Math.max(aliases.length, pwwns.length);
+            
+            for(let i = 0; i < maxLen; i++) {
+                makeRow(containerId, aliases[i] || '', pwwns[i] || '');
+            }
+            
+            // Xóa trắng ô nhập nhanh sau khi xử lý xong để chuẩn bị cho đợt tiếp theo
+            txtAlias.value = '';
+            txtPwwn.value = '';
+        }
+
         function getPorts(containerId) {
             const rows = document.getElementById(containerId).querySelectorAll('.port-row');
             const result = [];
@@ -135,6 +196,7 @@
             });
             return result;
         }
+
         function generate() {
             const vsanId = document.getElementById('vsanId').value || '1002';
             const zonesetName = document.getElementById('zonesetName').value.trim() || 'VKS_01';
@@ -163,7 +225,6 @@
                     lines.push(`member device-alias ${st}`);
                     lines.push(`member device-alias ${srv}`);
                     lines.push('exit');
-                    
                 });
                 lines.push('');
             });
@@ -175,12 +236,14 @@
             lines.push('exit');
             lines.push('');
             // save config
-            lines.push('/* Lưu cấu hình */');
+            lines.push('/* Lưu cấu hình vào NVRAM */');
             lines.push('Switch # copy running-config startup-config');
+            
             document.getElementById('output').textContent = lines.join('\n');
             document.getElementById('btnCopy').textContent = 'Copy';
             document.getElementById('btnCopy').className = 'btn-copy';
         }
+
         function copyConfig() {
             const text = document.getElementById('output').textContent;
             navigator.clipboard.writeText(text).then(() => {
@@ -190,6 +253,7 @@
                 setTimeout(() => { btn.textContent = 'Copy'; btn.className = 'btn-copy'; }, 2000);
             });
         }
+
         function downloadConfig() {
             const text = document.getElementById('output').textContent;
             const vsan = document.getElementById('vsanId').value || '1002';
@@ -200,7 +264,8 @@
             a.download = `san_config_${zs}_vsan${vsan}.txt`;
             a.click();
         }
-        // Init với data mẫu
+
+        // Init với data mẫu ban đầu
         defaultStorage.forEach(([a,p]) => makeRow('storagePorts', a, p));
         defaultServer.forEach(([a,p]) => makeRow('serverPorts', a, p));
     </script>
