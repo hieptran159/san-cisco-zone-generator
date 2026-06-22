@@ -172,10 +172,9 @@
             zones.forEach(z => lines.push(`member ${z}`));
             lines.push('exit');
             lines.push(`Switch (config)# zoneset activate name ${zonesetName} vsan ${vsanId}`);
-            lines.push('exit');
             lines.push('');
             // save config
-            lines.push('/* Lưu cấu hình vào NVRAM */');
+            lines.push('/* Lưu cấu hình */');
             lines.push('Switch # copy running-config startup-config');
             document.getElementById('output').textContent = lines.join('\n');
             document.getElementById('btnCopy').textContent = 'Copy';
