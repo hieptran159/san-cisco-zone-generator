@@ -61,7 +61,7 @@
                     <input id="zonesetName" type="text" value="VKS_01" placeholder="VKS_01">
                 </div>
                 <div>
-                    <label>Ký tự nối Zone</label>
+                    <label>Ký tự nối Zone (alias Storage - Server)</label>
                     <input id="zoneSeparator" type="text" value="-" placeholder="-">
                 </div>
             </div>
@@ -172,6 +172,11 @@
             zones.forEach(z => lines.push(`member ${z}`));
             lines.push('exit');
             lines.push(`Switch (config)# zoneset activate name ${zonesetName} vsan ${vsanId}`);
+            lines.push('exit');
+            lines.push('');
+            // save config
+            lines.push('/* Lưu cấu hình vào NVRAM */');
+            lines.push('Switch # copy running-config startup-config');
             document.getElementById('output').textContent = lines.join('\n');
             document.getElementById('btnCopy').textContent = 'Copy';
             document.getElementById('btnCopy').className = 'btn-copy';
